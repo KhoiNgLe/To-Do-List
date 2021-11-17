@@ -38,32 +38,35 @@ const defaultItems = [item1, item2, item3];
 
 app.get("/", function(req, res) {
 
-  Item.find({}, function(err, foundItems) {
+      Item.find({}, function(err, foundItems) {
 
-    if (foundItems.length === 0) {
-      Item.insertMany(defaultItems, function(err) {
-        if (err) {
-          console.log(err);
+        if (foundItems.length === 0) {
+          Item.insertMany(defaultItems, function(err) {
+            if (err) {
+              console.log(err);
+            } else {
+              console.log("Successfully saved default items to database");
+            }
+          });
+          res.redirect("/");
         } else {
-          console.log("Successfully saved default items to database");
+          res.render("list", {
+            listTitle: "Today",
+            newListItems: foundItems
+          });
         }
       });
-      res.redirect("/");
-    } else {
-      res.render("list", {
-        listTitle: "Today",
-        newListItems: foundItems
+});
+      app.post("/", function(req, res) {
+        const itemName = req.body.newItem;
+        const item = new Item({
+          name: itemName
+        });
+        item.save();
+        res.redirect("/");
       });
-    }
 
 
-
-  });
-});
-
-
-
-
-app.listen(3000, function() {
-  console.log("Server started on port 3000");
-});
+      app.listen(3000, function() {
+        console.log("Server started on port 3000");
+      });
