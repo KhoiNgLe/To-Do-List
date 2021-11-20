@@ -1,147 +1,49 @@
-//jshint esversion:6
+const button = document.querySelector('button');
 
-const express = require("express");
-const bodyParser = require("body-parser");
-const mongoose = require("mongoose");
-const _ = require("lodash");
+let modal;
+let backdrop;
 
-const app = express();
+button.addEventListener('click', showModalHandler);
 
-app.set('view engine', 'ejs');
-
-app.use(bodyParser.urlencoded({extended: true}));
-app.use(express.static("public"));
-
-mongoose.connect("mongodb+srv://khoijacksinh:Test123@cluster0.ncpn4.mongodb.net/todolistDB?retryWrites=true&w=majority/", {useNewUrlParser: true});
-
-const itemsSchema = {
-  name: String
-};
-
-const Item = mongoose.model("Item", itemsSchema);
-
-
-const item1 = new Item({
-  name: "Welcome to your todolist!"
-});
-
-const item2 = new Item({
-  name: "Hit the + button to add a new item."
-});
-
-const item3 = new Item({
-  name: "<-- Hit this to delete an item."
-});
-
-const defaultItems = [item1, item2, item3];
-
-const listSchema = {
-  name: String,
-  items: [itemsSchema]
-};
-
-const List = mongoose.model("List", listSchema);
-
-
-app.get("/", function(req, res) {
-
-  Item.find({}, function(err, foundItems){
-
-    if (foundItems.length === 0) {
-      Item.insertMany(defaultItems, function(err){
-        if (err) {
-          console.log(err);
-        } else {
-          console.log("Successfully savevd default items to DB.");
-        }
-      });
-      res.redirect("/");
-    } else {
-      res.render("list", {listTitle: "Today", newListItems: foundItems});
-    }
-  });
-
-});
-
-app.get("/:customListName", function(req, res){
-  const customListName = _.capitalize(req.params.customListName);
-
-  List.findOne({name: customListName}, function(err, foundList){
-    if (!err){
-      if (!foundList){
-        //Create a new list
-        const list = new List({
-          name: customListName,
-          items: defaultItems
-        });
-        list.save();
-        res.redirect("/" + customListName);
-      } else {
-        //Show an existing list
-
-        res.render("list", {listTitle: foundList.name, newListItems: foundList.items});
-      }
-    }
-  });
-
-
-
-});
-
-app.post("/", function(req, res){
-
-  const itemName = req.body.newItem;
-  const listName = req.body.list;
-
-  const item = new Item({
-    name: itemName
-  });
-
-  if (listName === "Today"){
-    item.save();
-    res.redirect("/");
-  } else {
-    List.findOne({name: listName}, function(err, foundList){
-      foundList.items.push(item);
-      foundList.save();
-      res.redirect("/" + listName);
-    });
-  }
-});
-
-app.post("/delete", function(req, res){
-  const checkedItemId = req.body.checkbox;
-  const listName = req.body.listName;
-
-  if (listName === "Today") {
-    Item.findByIdAndRemove(checkedItemId, function(err){
-      if (!err) {
-        console.log("Successfully deleted checked item.");
-        res.redirect("/");
-      }
-    });
-  } else {
-    List.findOneAndUpdate({name: listName}, {$pull: {items: {_id: checkedItemId}}}, function(err, foundList){
-      if (!err){
-        res.redirect("/" + listName);
-      }
-    });
+function showModalHandler() {
+  if (modal) {
+    return;
   }
 
+  modal = document.createElement('div');
+  modal.className = 'modal';
 
-});
+  const modalText = document.createElement('p');
+  modalText.textContent = 'Are you sure?';
 
-app.get("/about", function(req, res){
-  res.render("about");
-});
+  const modalCancelAction = document.createElement('button');
+  modalCancelAction.textContent = 'Cancel';
+  modalCancelAction.className = 'btn btn--alt';
+  modalCancelAction.addEventListener('click', closeModalHandler);
 
-let port = process.env.PORT;
-if (port == null || port == "") {
-  port = 3000;
+  const modalConfirmAction = document.createElement('button');
+  modalConfirmAction.textContent = 'Confirm';
+  modalConfirmAction.className = 'btn';
+  modalConfirmAction.addEventListener('click', closeModalHandler);
+
+  modal.append(modalText);
+  modal.append(modalCancelAction);
+  modal.append(modalConfirmAction);
+
+  document.body.append(modal);
+
+  backdrop = document.createElement('div');
+  backdrop.className = 'backdrop';
+
+  backdrop.addEventListener('click', closeModalHandler);
+
+  document.body.append(backdrop);
 }
-app.listen(port);
 
+function closeModalHandler() {
+  modal.remove();
+  modal = null;
 
-app.listen(port, function() {
-  console.log("Server started on port 3000");
-});
+  backdrop.remove();
+  backdrop = null;
+}
